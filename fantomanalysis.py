@@ -78,12 +78,12 @@ def flag_dust(file, nrows=1200001, by_r=True, radii=None, tolr=1.e-2, by_z=False
     by_z          - (bool)          : wether or not to flag particles by their altitude in the disc
     by_size       - (bool)          : wether or not to flag dust particles by their size
     radii         - (seq. or number): radii where to look for dust particles
-    alti          - (seq. or number): altitude where to look for dust particles
+    alti          - (seq. or number): altitudes where to look for dust particles
     sizes         - (seq. or number): sizes where to look for dust particles
     tolr          - (float)         : tolerance on radius for finding dust particles
     tolz          - (float)         : tolerance on altitude for finding dust particles
     tols          - (float)         : tolerance on size for finding dust particles
-    random_choice - (bool)          : wether or not to return only one randomly selected particles fullfiling the conditions
+    random_choice - (bool)          : wether or not to return only one randomly selected particles fullfiling the conditions if multiple are found
     '''
     # read file, do not clean in case particle is accreted
     data, time = read(file, clean=False)
@@ -92,7 +92,7 @@ def flag_dust(file, nrows=1200001, by_r=True, radii=None, tolr=1.e-2, by_z=False
     else:
         dust = data[data.type==8]
     
-    # every dimension of radii has its own dataframe containing chosen particles
+    # create output DataFrame
     flagged = np.empty(len(radii), dtype=pd.DataFrame)
     
     # flag the particles by applying masks according to the user's choice
@@ -115,16 +115,16 @@ def flag_dust(file, nrows=1200001, by_r=True, radii=None, tolr=1.e-2, by_z=False
             
     return flagged
     
-def update_particle_traj(file, part_ind, nrows=1200001, dfs=None):
+def update_particle_traj(file, part_index, nrows=1200001, dfs=None):
     '''
     Reads data from file (ascii) and continue filling the dataframe "dfs" with particles selected with the seq. part_ind.
     If dfs is None (first time calling this function), creates dataframe and start filling it.
     Arguments are:
-    file     - (str)           : filename of the phantom dumpfile (in ascii)
-    part_ind - (seq. or number): index of particle(s) to track
-    nrows    - (int)           : number of rows to read in dump file (= npart)
-    nrows    - (int)           : number of rows to read in the dump file (= npart)
-    dfs      - (DataFrame)     : array of dataframe contianing the particles data at every iterations of this function. If None, creates it.
+    file       - (str)           : filename of the phantom dumpfile (in ascii)
+    part_index - (seq. or number): index of particle(s) to track
+    nrows      - (int)           : number of rows to read in dump file (= npart)
+    nrows      - (int)           : number of rows to read in the dump file (= npart)
+    dfs        - (DataFrame)     : array of dataframe contianing the particles data at every iterations of this function. If None, creates it.
     '''
     # read ascii file and puts the data in dataframe
     data, time = read(file=file, nrows=nrows, clean=False)
@@ -133,18 +133,18 @@ def update_particle_traj(file, part_ind, nrows=1200001, dfs=None):
     data.loc[:,"time"] = time
 
     # apply mask on data using the particle index seq. part_ind
-    rows = data.loc[part_ind,:]
+    rows = data.loc[part_index,:]
     
     # create dataframe if first time around
     if dfs is None:
-        dfs = np.empty(len(part_ind), dtype=pd.DataFrame)
+        dfs = np.empty(len(part_index), dtype=pd.DataFrame)
     
     # fill passed dataframe with selected particles
-    for i in range(0, len(part_ind)):
+    for i in range(0, len(part_index)):
         if dfs[i] is None:
-            dfs[i] = pd.DataFrame(rows.loc[part_ind[i]]).T
+            dfs[i] = pd.DataFrame(rows.loc[part_index[i]]).T
         else:
-            dfs[i] = dfs[i].append(rows.loc[part_ind[i]].T, ignore_index=True)
+            dfs[i] = dfs[i].append(rows.loc[part_index[i]].T, ignore_index=True)
 
     return dfs
     
