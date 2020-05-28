@@ -29,7 +29,7 @@ usigma = umass/(udist**2)
 def read(file, nrows=1200001, rin=20, rout=300, clean=True):
     '''
     Reads an ascii file and cleans the data by rin (r>rin), rout (r<rout) and smoothing lentghs (h>0).
-    Changes the units from code to SI, except for x, y, z (AU).
+    Changes the units from code to SI, except for x, y, z (AU). Returns DF and time.
     Arguments are:
     file  - (str)  : name of the phantom dump file to read (ascii)
     nrows - (int)  : number of rows to read (= npart)
@@ -53,7 +53,7 @@ def read(file, nrows=1200001, rin=20, rout=300, clean=True):
         data = data[(data.r>rin) & (data.r<rout) & (data.h>0)]
     
     # add new quantities
-    vr = np.sqrt(data.vx*data.vx + data.vy+data.vy)
+    vr = np.sqrt(data.vx*data.vx + data.vy*data.vy)
     data.loc[:,"vr"] = vr
     
     # transform concerned columns in SI units - lenghts are still in au
