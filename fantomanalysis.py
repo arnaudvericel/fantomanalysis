@@ -26,7 +26,7 @@ uvel   = udist/utime
 udens  = umass/(udist**3)
 usigma = umass/(udist**2)
 
-def read(file, nrows=1200001, rin=20, rout=300, clean=True):
+def read(file, nrows=1200001, rin=20, rout=300, clean=True, porosity=False):
     '''
     Reads an ascii file and cleans the data by rin (r>rin), rout (r<rout) and smoothing lentghs (h>0).
     Changes the units from code to SI, except for x, y, z (AU). Returns DF and time.
@@ -39,7 +39,10 @@ def read(file, nrows=1200001, rin=20, rout=300, clean=True):
     '''
     
     # info relative to file reading
-    header = ['x', 'y', 'z', 'm', 'h', 'rho', 'dustfrac', 'grainsize', 'graindens', 'vrelvf', 'cs', 'rhogas', 'st', 'dv', 'vx', 'vy', 'vz', 'divv', 'dt', 'type']
+    if porosity:
+        header = ['x', 'y', 'z', 'm', 'h', 'rho', 'dustfrac', 'grainsize', 'graindens', 'vrelvf', 'cs', 'rhogas', 'st', 'dv', 'filfac', 'vx', 'vy', 'vz', 'divv', 'dt', 'type']
+    else:
+        header = ['x', 'y', 'z', 'm', 'h', 'rho', 'dustfrac', 'grainsize', 'graindens', 'vrelvf', 'cs', 'rhogas', 'st', 'dv', 'vx', 'vy', 'vz', 'divv', 'dt', 'type']
 
     # read infile data
     data = pd.read_csv(file, delim_whitespace=True, skiprows=14, nrows=nrows, header=None, names=header)
@@ -148,7 +151,7 @@ def update_particle_traj(file, part_index, nrows=1200001, dfs=None):
 
     return dfs
     
-def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbins=100, one_fluid=False):
+def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbins=100, one_fluid=False, porosity=False):
     '''
     Process an ascii phantom dumpfile and returns (in that order):
     -> Time as a float
@@ -169,7 +172,7 @@ def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15,
     '''
     
     # read file and clean it
-    data, time = read(file=file, nrows=nrows, rin=rin, rout=rout, clean=True)
+    data, time = read(file=file, nrows=nrows, rin=rin, rout=rout, clean=True, porosity=False)
 
     # define idust and igas depending on dust method
     if one_fluid:
@@ -244,6 +247,10 @@ def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15,
     pro_vdr_r     = dust.groupby("rindex").vr.mean().values
     pro_vgr_r     = gas.groupby("rindex").vr.mean().values
     
+    # posority
+    if porosity:
+        pro_filfac_r = dust.groupby("rindex").filfac.mean().values
+    
     # hgas and hdust - radii
     Hgas  = gas.groupby("rindex").z.std().values
     Hdust = dust.groupby("rindex").z.std().values # doesn't work with one fluid
@@ -288,7 +295,10 @@ def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15,
     pro_vdr_s      = dust.groupby("gsindex").vr.mean().values
     
     # profiles dicts
-    dict_r    = {"r": bin_r, "vgr": pro_vgr_r, "vdr": pro_vdr_r, "Hg": Hgas, "Hd": Hdust, "hg": hgas, "hd": hdust, "sigmag": sigmag, "sigmad": sigmad, "rhog": pro_rhog_r, "rhog_d": pro_rhog_d_r, "rhod": pro_rhod_r, "gsize": pro_size_r, "vrelvfrag": pro_vrelvf_r, "st": pro_st_r, "cs": pro_cs_r}
+    if porosity:
+        dict_r    = {"r": bin_r, "vgr": pro_vgr_r, "vdr": pro_vdr_r, "Hg": Hgas, "Hd": Hdust, "hg": hgas, "hd": hdust, "sigmag": sigmag, "sigmad": sigmad, "rhog": pro_rhog_r, "rhog_d": pro_rhog_d_r, "rhod": pro_rhod_r, "gsize": pro_size_r, "vrelvfrag": pro_vrelvf_r, "st": pro_st_r, "cs": pro_cs_r, "filfac": pro_filfac_r}
+    else:
+        dict_r    = {"r": bin_r, "vgr": pro_vgr_r, "vdr": pro_vdr_r, "Hg": Hgas, "Hd": Hdust, "hg": hgas, "hd": hdust, "sigmag": sigmag, "sigmad": sigmad, "rhog": pro_rhog_r, "rhog_d": pro_rhog_d_r, "rhod": pro_rhod_r, "gsize": pro_size_r, "vrelvfrag": pro_vrelvf_r, "st": pro_st_r, "cs": pro_cs_r}
     dict_z    = {"z": bin_z, "rhog": pro_rhog_z, "rhod": pro_rhod_z, "gsize": pro_size_z, "vrelvfrag": pro_vrelvf_z, "st": pro_st_z}
     dict_size = {"gsize": bin_gsize, "npart": count_gsize, "vdr": pro_vdr_s, "hd": pro_hd_s, "rhod": pro_rhod_s, "vrelvfrag": pro_vrelvf_s, "Hd": pro_Hd_s}
     dict_st   = {"st": bin_st, "npart": count_st, "vdr": pro_vdr_st, "hd": pro_hd_st, "rhod": pro_rhod_st,"vrelvfrag": pro_vrelvf_st, "Hd": pro_Hd_st}
