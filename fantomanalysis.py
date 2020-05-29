@@ -31,11 +31,12 @@ def read(file, nrows=1200001, rin=20, rout=300, clean=True, porosity=False):
     Reads an ascii file and cleans the data by rin (r>rin), rout (r<rout) and smoothing lentghs (h>0).
     Changes the units from code to SI, except for x, y, z (AU). Returns DF and time.
     Arguments are:
-    file  - (str)  : name of the phantom dump file to read (ascii)
-    nrows - (int)  : number of rows to read (= npart)
-    rin   - (float): inner radius for cleaning
-    rout  - (float): outer radius for cleaning
-    clean - (bool) : wether or not to clean the data
+    file  - (str)     : name of the phantom dump file to read (ascii)
+    nrows - (int)     : number of rows to read (= npart)
+    rin   - (float)   : inner radius for cleaning
+    rout  - (float)   : outer radius for cleaning
+    clean - (bool)    : wether or not to clean the data
+    porosity - (bool) : wether or not to expect filling factor in dumps
     '''
     
     # info relative to file reading
