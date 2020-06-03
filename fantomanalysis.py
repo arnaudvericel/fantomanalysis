@@ -26,13 +26,12 @@ uvel   = udist/utime
 udens  = umass/(udist**3)
 usigma = umass/(udist**2)
 
-def read(file, nrows=1200001, rin=20, rout=300, clean=True, porosity=False):
+def read(file, rin=20, rout=300, clean=True, porosity=False):
     '''
     Reads an ascii file and cleans the data by rin (r>rin), rout (r<rout) and smoothing lentghs (h>0).
     Changes the units from code to SI, except for x, y, z (AU). Returns DF and time.
     Arguments are:
     file  - (str)     : name of the phantom dump file to read (ascii)
-    nrows - (int)     : number of rows to read (= npart)
     rin   - (float)   : inner radius for cleaning
     rout  - (float)   : outer radius for cleaning
     clean - (bool)    : wether or not to clean the data
@@ -46,7 +45,7 @@ def read(file, nrows=1200001, rin=20, rout=300, clean=True, porosity=False):
         header = ['x', 'y', 'z', 'm', 'h', 'rho', 'dustfrac', 'grainsize', 'graindens', 'vrelvf', 'cs', 'rhogas', 'st', 'dv', 'vx', 'vy', 'vz', 'divv', 'dt', 'type']
 
     # read infile data
-    data = pd.read_csv(file, delim_whitespace=True, skiprows=14, nrows=nrows, header=None, names=header)
+    data = pd.read_csv(file, delim_whitespace=True, skiprows=14, header=None, names=header)
     timeline = np.loadtxt(file, skiprows=3, max_rows=1, usecols=(1,2), comments='&')
     time = int(timeline[0] * timeline[1])
     
@@ -64,7 +63,7 @@ def read(file, nrows=1200001, rin=20, rout=300, clean=True, porosity=False):
     data.loc[:,"m"]         = data.loc[:,"m"]*umass
     data.loc[:,"rho"]       = data.loc[:,"rho"]*udens
     data.loc[:,"grainsize"] = data.loc[:,"grainsize"]*udist
-    data.loc[:,"graindens"] = data.loc[:,"graindens"]*udist
+    data.loc[:,"graindens"] = data.loc[:,"graindens"]*udens
     data.loc[:,"cs"]        = data.loc[:,"cs"]*uvel
     data.loc[:,"rhogas"]    = data.loc[:,"rhogas"]*udens
     data.loc[:,"dv"]        = data.loc[:,"dv"]*uvel
@@ -72,12 +71,11 @@ def read(file, nrows=1200001, rin=20, rout=300, clean=True, porosity=False):
         
     return data, time
     
-def flag_dust(file, nrows=1200001, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, tolz=1.e-1, by_size=False, sizes=None, tols=1.e-2, random_choice=True, one_fluid=False):
+def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, tolz=1.e-1, by_size=False, sizes=None, tols=1.e-2, random_choice=True, one_fluid=False):
     '''
     Returns a list of indexes conrresponding to dust particles fullfiling certain conditions
     Arguments are:
     file          - (str)           : name of the phantom file where particles need to be flagged (ascii)
-    nrows         - (int)           : number of rows to read in dump file (= npart)
     by_r          - (bool)          : wether or not to flag particles by their distance to the star
     by_z          - (bool)          : wether or not to flag particles by their altitude in the disc
     by_size       - (bool)          : wether or not to flag dust particles by their size
@@ -119,19 +117,17 @@ def flag_dust(file, nrows=1200001, by_r=True, radii=None, tolr=1.e-2, by_z=False
             
     return flagged
     
-def update_particle_traj(file, part_index, nrows=1200001, dfs=None):
+def update_particle_traj(file, part_index, dfs=None):
     '''
     Reads data from file (ascii) and continue filling the dataframe "dfs" with particles selected with the seq. part_ind.
     If dfs is None (first time calling this function), creates dataframe and start filling it.
     Arguments are:
     file       - (str)           : filename of the phantom dumpfile (in ascii)
     part_index - (seq. or number): index of particle(s) to track
-    nrows      - (int)           : number of rows to read in dump file (= npart)
-    nrows      - (int)           : number of rows to read in the dump file (= npart)
     dfs        - (DataFrame)     : array of dataframe contianing the particles data at every iterations of this function. If None, creates it.
     '''
     # read ascii file and puts the data in dataframe
-    data, time = read(file=file, nrows=nrows, clean=False)
+    data, time = read(file=file, clean=False)
     
     # add time as a new column
     data.loc[:,"time"] = time
@@ -152,7 +148,7 @@ def update_particle_traj(file, part_index, nrows=1200001, dfs=None):
 
     return dfs
     
-def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbins=100, one_fluid=False, porosity=False):
+def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbins=100, one_fluid=False, porosity=False):
     '''
     Process an ascii phantom dumpfile and returns (in that order):
     -> Time as a float
@@ -162,7 +158,6 @@ def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15,
     -> Stokes number profiles of various quantities as a DataFrame
     Arguments are:
     file   - (str)  : filename of the phantom dumpfile (in ascii)
-    nrows  - (int)  : number of rows to read in dumpfile (=npart)
     rin    - (float): inner radius inside of which particles are deleted
     rout   - (float): outer radius outsidre of which particles are deleted
     logr   - (bool) : wether or not to bin radius in logscale
@@ -173,7 +168,7 @@ def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15,
     '''
     
     # read file and clean it
-    data, time = read(file=file, nrows=nrows, rin=rin, rout=rout, clean=True, porosity=False)
+    data, time = read(file=file, rin=rin, rout=rout, clean=True, porosity=False)
 
     # define idust and igas depending on dust method
     if one_fluid:
@@ -295,11 +290,33 @@ def bins(file, nrows=1200001, rin=20, rout=300, logr=True, rbins=200, vazmin=15,
     pro_vdr_st     = dust.groupby("stindex").vr.mean().values
     pro_vdr_s      = dust.groupby("gsindex").vr.mean().values
     
-    # profiles dicts
-    if porosity:
-        dict_r    = {"r": bin_r, "vgr": pro_vgr_r, "vdr": pro_vdr_r, "Hg": Hgas, "Hd": Hdust, "hg": hgas, "hd": hdust, "sigmag": sigmag, "sigmad": sigmad, "rhog": pro_rhog_r, "rhog_d": pro_rhog_d_r, "rhod": pro_rhod_r, "gsize": pro_size_r, "vrelvfrag": pro_vrelvf_r, "st": pro_st_r, "cs": pro_cs_r, "filfac": pro_filfac_r}
+    # dv
+    if one_fluid:
+        pro_dv_r = gas.groupby("rindex").dv.mean().values
     else:
-        dict_r    = {"r": bin_r, "vgr": pro_vgr_r, "vdr": pro_vdr_r, "Hg": Hgas, "Hd": Hdust, "hg": hgas, "hd": hdust, "sigmag": sigmag, "sigmad": sigmad, "rhog": pro_rhog_r, "rhog_d": pro_rhog_d_r, "rhod": pro_rhod_r, "gsize": pro_size_r, "vrelvfrag": pro_vrelvf_r, "st": pro_st_r, "cs": pro_cs_r}
+        pro_dv_r = dust.groupby("rindex").dv.mean().values
+    
+    # profiles dicts
+    dict_r = {"r": bin_r,
+              "vgr": pro_vgr_r,
+              "vdr": pro_vdr_r,
+              "Hg": Hgas,
+              "Hd": Hdust,
+              "hg": hgas,
+              "hd": hdust,
+              "sigmag": sigmag,
+              "sigmad": sigmad,
+              "rhog": pro_rhog_r,
+              "rhog_d": pro_rhog_d_r,
+              "rhod": pro_rhod_r,
+              "gsize": pro_size_r,
+              "vrelvfrag": pro_vrelvf_r,
+              "dv": pro_dv_r,
+              "st": pro_st_r,
+              "cs": pro_cs_r}
+    if porosity:
+        dict_r["filfac"] = pro_filfac_r
+
     dict_z    = {"z": bin_z, "rhog": pro_rhog_z, "rhod": pro_rhod_z, "gsize": pro_size_z, "vrelvfrag": pro_vrelvf_z, "st": pro_st_z}
     dict_size = {"gsize": bin_gsize, "npart": count_gsize, "vdr": pro_vdr_s, "hd": pro_hd_s, "rhod": pro_rhod_s, "vrelvfrag": pro_vrelvf_s, "Hd": pro_Hd_s}
     dict_st   = {"st": bin_st, "npart": count_st, "vdr": pro_vdr_st, "hd": pro_hd_st, "rhod": pro_rhod_st,"vrelvfrag": pro_vrelvf_st, "Hd": pro_Hd_st}
