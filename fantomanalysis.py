@@ -32,10 +32,10 @@ def read(file, rin=20, rout=300, clean=True, porosity=False):
     Changes the units from code to SI, except for x, y, z (AU). Returns DF and time.
     Arguments are:
     file  - (str)     : name of the phantom dump file to read (ascii)
-    rin   - (float)   : inner radius for cleaning
-    rout  - (float)   : outer radius for cleaning
-    clean - (bool)    : wether or not to clean the data
-    porosity - (bool) : wether or not to expect filling factor in dumps
+    rin   - (float)   : inner radius for cleaning - optional
+    rout  - (float)   : outer radius for cleaning - optional
+    clean - (bool)    : wether or not to clean the data - optional
+    porosity - (bool) : wether or not to expect filling factor in dumps - optional
     '''
     
     # info relative to file reading
@@ -56,7 +56,7 @@ def read(file, rin=20, rout=300, clean=True, porosity=False):
         data = data[(data.r>rin) & (data.r<rout) & (data.h>0)]
     
     # add new quantities
-    vr = np.sqrt(data.vx*data.vx + data.vy*data.vy)
+    vr = (data.vx*data.x + data.vy*data.y)/data.r
     data.loc[:,"vr"] = vr
     
     # transform concerned columns in SI units - lenghts are still in au
@@ -76,16 +76,16 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
     Returns a list of indexes conrresponding to dust particles fullfiling certain conditions
     Arguments are:
     file          - (str)           : name of the phantom file where particles need to be flagged (ascii)
-    by_r          - (bool)          : wether or not to flag particles by their distance to the star
-    by_z          - (bool)          : wether or not to flag particles by their altitude in the disc
-    by_size       - (bool)          : wether or not to flag dust particles by their size
-    radii         - (seq. or number): radii where to look for dust particles
-    alti          - (seq. or number): altitudes where to look for dust particles
-    sizes         - (seq. or number): sizes where to look for dust particles
-    tolr          - (float)         : tolerance on radius for finding dust particles
-    tolz          - (float)         : tolerance on altitude for finding dust particles
-    tols          - (float)         : tolerance on size for finding dust particles
-    random_choice - (bool)          : wether or not to return only one randomly selected particles fullfiling the conditions if multiple are found
+    by_r          - (bool)          : wether or not to flag particles by their distance to the star - optional
+    by_z          - (bool)          : wether or not to flag particles by their altitude in the disc - optional
+    by_size       - (bool)          : wether or not to flag dust particles by their size - optional
+    radii         - (seq. or number): radii where to look for dust particles - optional
+    alti          - (seq. or number): altitudes where to look for dust particles - optional
+    sizes         - (seq. or number): sizes where to look for dust particles - optional
+    tolr          - (float)         : tolerance on radius for finding dust particles - optional
+    tolz          - (float)         : tolerance on altitude for finding dust particles - optional
+    tols          - (float)         : tolerance on size for finding dust particles - optional
+    random_choice - (bool)          : wether or not to return only one randomly selected particles fullfiling the conditions if multiple are found - optional
     '''
     # read file, do not clean in case particle is accreted
     data, time = read(file, clean=False)
@@ -148,7 +148,7 @@ def update_particle_traj(file, part_index, dfs=None):
 
     return dfs
     
-def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbins=100, one_fluid=False, porosity=False):
+def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbins=100, binz=False, bins=False, binst=False, one_fluid=False, porosity=False):
     '''
     Process an ascii phantom dumpfile and returns (in that order):
     -> Time as a float
@@ -158,13 +158,18 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
     -> Stokes number profiles of various quantities as a DataFrame
     Arguments are:
     file   - (str)  : filename of the phantom dumpfile (in ascii)
-    rin    - (float): inner radius inside of which particles are deleted
-    rout   - (float): outer radius outsidre of which particles are deleted
-    logr   - (bool) : wether or not to bin radius in logscale
-    rbins  - (int)  : number of bins along the r axis
-    vazmin - (float): absolute value of the minimum altitude where altitude binning starts (symmetrical)
-    zbins  - (int)  : number of bins along the z axis between vazmin and -vazmin
-    sbins  - (int)  : number of size & St bins (only logspaced)
+    rin    - (float): inner radius inside of which particles are deleted - optional
+    rout   - (float): outer radius outsidre of which particles are deleted - optional
+    logr   - (bool) : wether or not to bin radius in logscale - optional
+    rbins  - (int)  : number of bins along the r axis - optional
+    vazmin - (float): absolute value of the minimum altitude where altitude binning starts (symmetrical) - optional
+    zbins  - (int)  : number of bins along the z axis between vazmin and -vazmin - optional
+    sbins  - (int)  : number of size & St bins (only logspaced) - optional
+    binz   - (bool) : wether or not to bin along z - optional
+    bins   - (bool) : wether or not to bin along grainsize - optional
+    binst  - (bool) : wether or not to bin along St - optional
+    one_fluid - (bool) : wether or not to expect a one fluid dump - optional
+    porosity  - (bool) : wether or not to expect a filing factor array - optional
     '''
     
     # read file and clean it
@@ -178,10 +183,12 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
     igas = 1
     
     # find minimum and maximum values of size and St for binning
-    stmin = np.min(data[data.type == idust].st)
-    stmax = np.max(data[data.type == idust].st)
-    smin = np.min(data[data.type == idust].grainsize)
-    smax = np.max(data[data.type == idust].grainsize)
+    if binst:
+        stmin = np.min(data[data.type == idust].st)
+        stmax = np.max(data[data.type == idust].st)
+    if bins:
+        smin = np.min(data[data.type == idust].grainsize)
+        smax = np.max(data[data.type == idust].grainsize)
     
     # radii binning
     if logr:
@@ -190,15 +197,21 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
         rindex, bins_r = pd.cut(data.r, rbins, retbins=True)
         
     # z, s and St indexes for binning
-    zindex                = pd.cut(data.z, np.linspace(-vazmin, vazmin, num=zbins)) # linear
-    gsindex, bins_gsize   = pd.cut(data.grainsize, np.logspace(np.log10(smin), np.log10(smax), num=sbins), retbins=True, duplicates="drop")
-    stindex, bins_st      = pd.cut(data.st, np.logspace(np.log10(stmin), np.log10(stmax), num=sbins), retbins=True) # log
+    if binz:
+        zindex                = pd.cut(data.z, np.linspace(-vazmin, vazmin, num=zbins)) # linear
+    if bins:
+        gsindex, bins_gsize   = pd.cut(data.grainsize, np.logspace(np.log10(smin), np.log10(smax), num=sbins), retbins=True, duplicates="drop")
+    if binst:
+        stindex, bins_st      = pd.cut(data.st, np.logspace(np.log10(stmin), np.log10(stmax), num=sbins), retbins=True) # log
     
     # add the indexes to the DataFrame as a new column
     data.loc[:,"rindex"]  = rindex
-    data.loc[:,"zindex"]  = zindex
-    data.loc[:,"gsindex"] = gsindex
-    data.loc[:,"stindex"] = stindex
+    if binz:
+       data.loc[:,"zindex"]  = zindex
+    if bins:
+        data.loc[:,"gsindex"] = gsindex
+    if binst:
+        data.loc[:,"stindex"] = stindex
 
     # gas and dust specific dataframes with masks
     dust = data[data.type==idust]
@@ -206,11 +219,14 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
 
     # binning r, z, size and St - count particles per bins of St and size
     bin_r       = gas.groupby("rindex").r.mean().values # always bin spatial dim. with gas - more extended than dust
-    bin_z       = gas.groupby("zindex").z.mean().values # same
-    bin_gsize   = dust.groupby("gsindex").grainsize.mean().values
-    bin_st      = dust.groupby("stindex").st.mean().values
-    count_st    = dust.groupby("stindex").st.count().values
-    count_gsize = dust.groupby("gsindex").grainsize.count().values
+    if binz:
+        bin_z       = gas.groupby("zindex").z.mean().values # same
+    if bins:
+        bin_gsize   = dust.groupby("gsindex").grainsize.mean().values
+        count_gsize = dust.groupby("gsindex").grainsize.count().values
+    if binst:
+        bin_st      = dust.groupby("stindex").st.mean().values
+        count_st    = dust.groupby("stindex").st.count().values
     
     # dust and gas surface densities
     bin_dust_mass = dust.groupby("rindex").m.sum().values
@@ -258,37 +274,42 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
         hgas  = gas.groupby("rindex").h.mean().values
     
     # same - altitude
-    if one_fluid:
-        pro_dustfrac_z = gas.groupby("zindex").dustfrac.mean().values
-    pro_size_z     = dust.groupby("zindex").grainsize.mean().values
-    pro_st_z       = dust.groupby("zindex").st.mean().values
-    if one_fluid:
-        pro_rhod_z     = dust.groupby("zindex").rho.mean().values * pro_dustfrac_z
-        pro_rhog_z     = gas.groupby("zindex").rho.mean().values * (1-pro_dustfrac_z)
-    else:
-        pro_rhod_z     = dust.groupby("zindex").rho.mean().values
-        pro_rhog_z     = gas.groupby("zindex").rho.mean().values
-    pro_vrelvf_z   = dust.groupby("zindex").vrelvf.mean().values
+    if binz:
+        if one_fluid:
+            pro_dustfrac_z = gas.groupby("zindex").dustfrac.mean().values
+        pro_size_z     = dust.groupby("zindex").grainsize.mean().values
+        pro_st_z       = dust.groupby("zindex").st.mean().values
+        if one_fluid:
+            pro_rhod_z     = dust.groupby("zindex").rho.mean().values * pro_dustfrac_z
+            pro_rhog_z     = gas.groupby("zindex").rho.mean().values * (1-pro_dustfrac_z)
+        else:
+            pro_rhod_z     = dust.groupby("zindex").rho.mean().values
+            pro_rhog_z     = gas.groupby("zindex").rho.mean().values
+        pro_vrelvf_z   = dust.groupby("zindex").vrelvf.mean().values
     
     # same - size and St
     if one_fluid:
-        pro_dustfrac_s  = gas.groupby("gsindex").dustfrac.mean().values
-        pro_dustfrac_st = gas.groupby("stindex").dustfrac.mean().values
-        pro_rhod_s      = gas.groupby("gsindex").rho.mean().values * pro_dustfrac_s
-        pro_rhod_st     = gas.groupby("stindex").rho.mean().values * pro_dustfrac_st
-        pro_hd_s        = gas.groupby("gsindex").h.mean().values * 1/pro_dustfrac_s
-        pro_hd_st       = gas.groupby("stindex").h.mean().values * 1/pro_dustfrac_st
+        if bins:
+            pro_dustfrac_s  = gas.groupby("gsindex").dustfrac.mean().values
+            pro_rhod_s      = gas.groupby("gsindex").rho.mean().values * pro_dustfrac_s
+            pro_hd_s        = gas.groupby("gsindex").h.mean().values * 1/pro_dustfrac_s
+        if binst:
+            pro_dustfrac_st = gas.groupby("stindex").dustfrac.mean().values
+            pro_rhod_st     = gas.groupby("stindex").rho.mean().values * pro_dustfrac_st
+            pro_hd_st       = gas.groupby("stindex").h.mean().values * 1/pro_dustfrac_st
     else:
-        pro_rhod_s      = dust.groupby("gsindex").rho.mean().values
-        pro_rhod_st     = dust.groupby("stindex").rho.mean().values
-        pro_hd_s        = dust.groupby("gsindex").h.mean().values
-        pro_hd_st       = dust.groupby("stindex").h.mean().values
-    pro_vrelvf_s   = dust.groupby("gsindex").vrelvf.mean().values
-    pro_vrelvf_st  = dust.groupby("stindex").vrelvf.mean().values
-    pro_Hd_st      = dust.groupby("stindex").z.std().values
-    pro_Hd_s       = dust.groupby("gsindex").z.std().values
-    pro_vdr_st     = dust.groupby("stindex").vr.mean().values
-    pro_vdr_s      = dust.groupby("gsindex").vr.mean().values
+        if bins:
+            pro_rhod_s      = dust.groupby("gsindex").rho.mean().values
+            pro_hd_s        = dust.groupby("gsindex").h.mean().values
+            pro_vrelvf_s   = dust.groupby("gsindex").vrelvf.mean().values
+            pro_Hd_s       = dust.groupby("gsindex").z.std().values
+            pro_vdr_s      = dust.groupby("gsindex").vr.mean().values
+        if binst:
+            pro_rhod_st     = dust.groupby("stindex").rho.mean().values
+            pro_hd_st       = dust.groupby("stindex").h.mean().values
+            pro_vrelvf_st  = dust.groupby("stindex").vrelvf.mean().values
+            pro_Hd_st      = dust.groupby("stindex").z.std().values
+            pro_vdr_st     = dust.groupby("stindex").vr.mean().values
     
     # dv
     if one_fluid:
@@ -317,14 +338,32 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
     if porosity:
         dict_r["filfac"] = pro_filfac_r
 
-    dict_z    = {"z": bin_z, "rhog": pro_rhog_z, "rhod": pro_rhod_z, "gsize": pro_size_z, "vrelvfrag": pro_vrelvf_z, "st": pro_st_z}
-    dict_size = {"gsize": bin_gsize, "npart": count_gsize, "vdr": pro_vdr_s, "hd": pro_hd_s, "rhod": pro_rhod_s, "vrelvfrag": pro_vrelvf_s, "Hd": pro_Hd_s}
-    dict_st   = {"st": bin_st, "npart": count_st, "vdr": pro_vdr_st, "hd": pro_hd_st, "rhod": pro_rhod_st,"vrelvfrag": pro_vrelvf_st, "Hd": pro_Hd_st}
+    if binz:
+        dict_z    = {"z": bin_z, "rhog": pro_rhog_z, "rhod": pro_rhod_z, "gsize": pro_size_z, "vrelvfrag": pro_vrelvf_z, "st": pro_st_z}
+        profiles_z    = pd.DataFrame(data=dict_z)
+    if bins:
+        dict_size = {"gsize": bin_gsize, "npart": count_gsize, "vdr": pro_vdr_s, "hd": pro_hd_s, "rhod": pro_rhod_s, "vrelvfrag": pro_vrelvf_s, "Hd": pro_Hd_s}
+        profiles_size = pd.DataFrame(data=dict_size)
+    if binst:
+        dict_st   = {"st": bin_st, "npart": count_st, "vdr": pro_vdr_st, "hd": pro_hd_st, "rhod": pro_rhod_st,"vrelvfrag": pro_vrelvf_st, "Hd": pro_Hd_st}
+        profiles_st   = pd.DataFrame(data=dict_st)
     
     # convert to DataFrames
     profiles_r    = pd.DataFrame(data=dict_r)
-    profiles_z    = pd.DataFrame(data=dict_z)
-    profiles_size = pd.DataFrame(data=dict_size)
-    profiles_st   = pd.DataFrame(data=dict_st)
     
-    return time, profiles_r, profiles_z, profiles_size, profiles_st
+    if binz:
+        if bins:
+            if binst:
+                return time, profiles_r, profiles_z, profiles_size, profiles_st
+            else:
+                return time, profiles_r, profiles_z, profiles_size
+        else:
+            if binst:
+                return time, profiles_r, profiles_z, profiles_st
+            else:
+                return time, profiles_r, profiles_z
+    else:
+        if binst:
+            return time, profiles_r, profiles_st
+        else:
+            return time, profiles_r
