@@ -173,7 +173,7 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
     '''
     
     # read file and clean it
-    data, time = read(file=file, rin=rin, rout=rout, clean=True, porosity=False)
+    data, time = read(file=file, rin=rin, rout=rout, clean=True, porosity=porosity)
 
     # define idust and igas depending on dust method
     if one_fluid:
