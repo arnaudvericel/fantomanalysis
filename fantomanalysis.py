@@ -99,18 +99,19 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
     
     # flag the particles by applying masks according to the user's choice
     for i in range(0, len(flagged)):
+        flagged[i] = dust
         if by_r:
-            flagged[i] = dust[np.absolute(dust.r-radii[i])/dust.r < tolr]
+            flagged[i] = flagged[i][np.absolute(dust.r-radii[i])/radii[i] < tolr]
         if by_z:
-            flagged[i] = flagged[i][np.absolute((flagged[i].z-alti[i])/flagged[i].z) < tolz]
+            flagged[i] = flagged[i][np.absolute((flagged[i].z-alti[i])/alti[i]) < tolz]
         if by_size:
-            flagged[i] = flagged[i][np.absolute(flagged[i].grainsize-sizes[i])/flagged[i].grainsize < tols]
+            flagged[i] = flagged[i][np.absolute(flagged[i].grainsize-sizes[i])/sizes[i] < tols]
         flagged[i] = flagged[i].index
         if random_choice:
             flagged[i] = np.random.choice(flagged[i])
     
     # print out some info
-    print(f"{len(radii)} particles selected:\n")
+    print("particles selected:\n")
     print(f"r ---- z ---- size \n")
     for index in flagged:
         print(dust.loc[index,"r"], dust.loc[index,"z"], dust.loc[index,"grainsize"])
@@ -365,5 +366,7 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
     else:
         if binst:
             return time, profiles_r, profiles_st
+        elif bins:
+            return time, profiles_r, profiles_size
         else:
             return time, profiles_r
