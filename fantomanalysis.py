@@ -4,7 +4,7 @@ This module contains 4 functions:
 
 -> read
 -> flag_dust
--> update_particle_traj
+-> follow
 -> bins
 
 If you are on a jupyter notebook or ipython, you can type either one of these function along with "?" to have more informations.
@@ -71,7 +71,7 @@ def read(file, rin=20, rout=300, clean=True, porosity=False):
         
     return data, time
     
-def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, tolz=1.e-1, by_size=False, sizes=None, tols=1.e-2, random_choice=True, one_fluid=False):
+def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, tolz=1.e-1, by_size=False, sizes=None, tols=1.e-2, one_per_condition=True, one_fluid=False):
     '''
     Returns a list of indexes corresponding to dust particles fullfiling certain conditions
     Arguments are:
@@ -85,7 +85,7 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
     tolr          - (float)         : tolerance on radius for finding dust particles - optional
     tolz          - (float)         : tolerance on altitude for finding dust particles - optional
     tols          - (float)         : tolerance on size for finding dust particles - optional
-    random_choice - (bool)          : wether or not to return only one randomly selected particles fullfiling the conditions if multiple are found - optional
+    one_per_condition - (bool)      : wether or not to return only one randomly selected particle fullfiling the conditions if multiple are found - optional
     '''
     # read file, do not clean in case particle is accreted
     data, time = read(file, clean=False)
@@ -107,7 +107,7 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
         if by_size:
             flagged[i] = flagged[i][np.absolute(flagged[i].grainsize-sizes[i])/sizes[i] < tols]
         flagged[i] = flagged[i].index
-        if random_choice:
+        if one_per_condition:
             flagged[i] = np.random.choice(flagged[i])
     
     # print out some info
@@ -118,7 +118,7 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
             
     return flagged
     
-def update_particle_traj(file, part_index, dfs=None):
+def follow(file, part_index, dfs=None):
     '''
     Reads data from file (ascii) and continue filling the dataframe "dfs" with particles selected with the seq. part_ind.
     If dfs is None (first time calling this function), creates dataframe and start filling it.
