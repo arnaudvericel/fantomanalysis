@@ -73,7 +73,7 @@ def read(file, rin=20, rout=300, clean=True, porosity=False):
     
 def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, tolz=1.e-1, by_size=False, sizes=None, tols=1.e-2, random_choice=True, one_fluid=False):
     '''
-    Returns a list of indexes conrresponding to dust particles fullfiling certain conditions
+    Returns a list of indexes corresponding to dust particles fullfiling certain conditions
     Arguments are:
     file          - (str)           : name of the phantom file where particles need to be flagged (ascii)
     by_r          - (bool)          : wether or not to flag particles by their distance to the star - optional
