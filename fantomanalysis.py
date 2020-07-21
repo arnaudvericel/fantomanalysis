@@ -101,7 +101,7 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
     one_per_condition - (bool)      : wether or not to return only one randomly selected particle fullfiling the specified conditions if multiple are found - optional
     '''
     # read file, do not clean in case particle is accreted
-    data, time = read(file, clean=False)
+    time, data = read(file, clean=False)
     if one_fluid:
         dust = data[data.type==1]
     else:
@@ -140,7 +140,7 @@ def follow(files, part_index):
     '''
     def update_traj(file, part_index, dfs=None):
         # read ascii file and puts the data in dataframe
-        data, time = read(file=file, clean=False)
+        time, data = read(file=file, clean=False)
     
         # add time as a new column
         data.loc[:,"time"] = time
@@ -199,7 +199,7 @@ def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbin
     '''
     
     # read file and clean it
-    data, time = read(file=file, rin=rin, rout=rout, clean=True, porosity=porosity)
+    time, data = read(file=file, rin=rin, rout=rout, clean=True, porosity=porosity)
 
     # define idust and igas depending on dust method
     if one_fluid:
