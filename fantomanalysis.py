@@ -8,6 +8,19 @@ This module contains 4 functions:
 -> bins
 
 If you are on a jupyter notebook or ipython, you can type either one of these function along with "?" to have more informations.
+----
+You also have access to the following constants:
+- msol
+- au
+- yr
+- utime
+- umass
+- udist
+- uvel
+- udens
+- usigma
+
+Example: Let's say you imported fantomanalysis as "fa", then you have access to the solar mass by typing fa.msol
 '''
 import matplotlib.pyplot as plt
 import matplotlib
@@ -29,7 +42,7 @@ usigma = umass/(udist**2)
 def read(file, rin=20, rout=300, clean=True, porosity=False):
     '''
     Reads an ascii file and cleans the data by rin (r>rin), rout (r<rout) and smoothing lentghs (h>0).
-    Changes the units from code to SI, except for x, y, z (AU). Returns DF and time.
+    Changes the units from code to SI, except for x, y, z and h (au). Returns time and a DataFrame.
     Arguments are:
     file  - (str)     : name of the phantom dump file to read (ascii)
     rin   - (float)   : inner radius for cleaning - optional
@@ -69,7 +82,7 @@ def read(file, rin=20, rout=300, clean=True, porosity=False):
     data.loc[:,"dv"]        = data.loc[:,"dv"]*uvel
     data.loc[:,"vr"]        = data.loc[:,"vr"]*uvel
         
-    return data, time
+    return time, data
     
 def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, tolz=1.e-1, by_size=False, sizes=None, tols=1.e-2, one_per_condition=True, one_fluid=False):
     '''
@@ -85,7 +98,7 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
     tolr          - (float)         : tolerance on radius for finding dust particles - optional
     tolz          - (float)         : tolerance on altitude for finding dust particles - optional
     tols          - (float)         : tolerance on size for finding dust particles - optional
-    one_per_condition - (bool)      : wether or not to return only one randomly selected particle fullfiling the conditions if multiple are found - optional
+    one_per_condition - (bool)      : wether or not to return only one randomly selected particle fullfiling the specified conditions if multiple are found - optional
     '''
     # read file, do not clean in case particle is accreted
     data, time = read(file, clean=False)
@@ -118,45 +131,57 @@ def flag_dust(file, by_r=True, radii=None, tolr=1.e-2, by_z=False, alti=None, to
             
     return flagged
     
-def follow(file, part_index, dfs=None):
+def follow(files, part_index):
     '''
-    Reads data from file (ascii) and continue filling the dataframe "dfs" with particles selected with the seq. part_ind.
-    If dfs is None (first time calling this function), creates dataframe and start filling it.
+    Follow particles corresponding to a list of indexes through different files and returns a DataFrame of their trajectories.
     Arguments are:
-    file       - (str)           : filename of the phantom dumpfile (in ascii)
-    part_index - (seq. or number): index of particle(s) to track
-    dfs        - (DataFrame)     : array of dataframe contianing the particles data at every iterations of this function. If None, creates it.
+    files      - (seq. of strings) : filenames of phantom dumpfiles (in ascii)
+    part_index - (seq. of int)     : index(es) of particle(s) to track
     '''
-    # read ascii file and puts the data in dataframe
-    data, time = read(file=file, clean=False)
+    def update_traj(file, part_index, dfs=None):
+        # read ascii file and puts the data in dataframe
+        data, time = read(file=file, clean=False)
     
-    # add time as a new column
-    data.loc[:,"time"] = time
+        # add time as a new column
+        data.loc[:,"time"] = time
 
-    # apply mask on data using the particle index seq. part_ind
-    rows = data.loc[part_index,:]
+        # apply mask on data using the particle index seq. part_ind
+        rows = data.loc[part_index,:]
     
-    # create dataframe if first time around
-    if dfs is None:
-        dfs = np.empty(len(part_index), dtype=pd.DataFrame)
+        # create dataframe if first time around
+        if dfs is None:
+            dfs = np.empty(len(part_index), dtype=pd.DataFrame)
     
-    # fill passed dataframe with selected particles
-    for i in range(0, len(part_index)):
-        if dfs[i] is None:
-            dfs[i] = pd.DataFrame(rows.loc[part_index[i]]).T
+        # fill passed dataframe with selected particles
+        for i in range(0, len(part_index)):
+            if dfs[i] is None:
+                dfs[i] = pd.DataFrame(rows.loc[part_index[i]]).T
+            else:
+                dfs[i] = dfs[i].append(rows.loc[part_index[i]].T, ignore_index=True)
+
+        return dfs
+    
+    # create empty list of DF structure
+    data = np.empty(len(part_index), dtype=pd.DataFrame)
+    
+    # loop over files and fill DataFrame with selected particles
+    for file in files:
+        if file == files[0]:
+            data = update_traj(file, part_index)
         else:
-            dfs[i] = dfs[i].append(rows.loc[part_index[i]].T, ignore_index=True)
-
-    return dfs
+            data = update_traj(file, part_index, dfs=data)
+        print(f"--> {file} done.")
     
+    return data
+            
 def bins(file, rin=20, rout=300, logr=True, rbins=200, vazmin=15, zbins=15, sbins=100, binz=False, bins=False, binst=False, one_fluid=False, porosity=False):
     '''
     Process an ascii phantom dumpfile and returns (in that order):
     -> Time as a float
     -> Radial profiles of various quantities as a DataFrame
-    -> Altitude profiles of various quantities as a DataFrame
-    -> Size profiles of various quantities as a DataFrame
-    -> Stokes number profiles of various quantities as a DataFrame
+    -> Altitude profiles of various quantities as a DataFrame (optional)
+    -> Size profiles of various quantities as a DataFrame (optional)
+    -> Stokes number profiles of various quantities as a DataFrame (optional)
     Arguments are:
     file   - (str)  : filename of the phantom dumpfile (in ascii)
     rin    - (float): inner radius inside of which particles are deleted - optional
