@@ -9,7 +9,7 @@ fantomanalysis offers the following functionalities:
 - Flag dust particles that fulfil certain conditions (radii, altitude, size)
 - Follow selected particles through a set of dumps and returns the evolution of their properties as a DataFrame
 
-The idea behind fantomanalysis is to provide an analyzing tool user friendly that takes advantage of the other python packages and flexibility
+The idea behind fantomanalysis is to provide an user friendly analyzing tool that takes advantage of the other python packages and flexibility
 
 ---
 
